@@ -31,19 +31,97 @@ export async function GET(request: Request) {
       });
     }
 
-    return fetchRequestHandler({
-      endpoint: '/api/trpc',
-      req: request,
-      router: appRouter,
-      createContext: ({ req }) => createContext({ req }),
-      onError({ error, path }) {
-        console.error('[tRPC /api/trpc/*] Error:', path, error.message);
-      },
-    });
-  } catch (error) {
+    try {
+      const response = await fetchRequestHandler({
+        endpoint: '/api/trpc',
+        req: request,
+        router: appRouter,
+        createContext: ({ req }) => createContext({ req }),
+        onError({ error, path }) {
+          console.error('[tRPC /api/trpc/*] Error:', path, error.message);
+        },
+      });
+      
+      // Ensure response has proper content-type header and is JSON
+      if (response) {
+        const contentType = response.headers.get('content-type') || '';
+        
+        // Check if response might be HTML (error page)
+        if (contentType.includes('text/html') || !contentType.includes('application/json')) {
+          try {
+            const clonedResponse = response.clone();
+            const text = await clonedResponse.text();
+            console.warn('[tRPC /api/trpc/*] Response content-type:', contentType);
+            console.warn('[tRPC /api/trpc/*] Response body preview:', text.substring(0, 200));
+            
+            // If it's HTML, it means we got an error page
+            if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+              console.error('[tRPC /api/trpc/*] Received HTML error page instead of JSON');
+              const errorResponse = [{
+                error: {
+                  message: 'Server returned HTML error page. The API route may not be configured correctly.',
+                  code: -32603,
+                  data: {
+                    code: 'INTERNAL_SERVER_ERROR',
+                    httpStatus: response.status,
+                  },
+                },
+              }];
+              
+              return new Response(JSON.stringify(errorResponse), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              });
+            }
+          } catch (readError) {
+            console.error('[tRPC /api/trpc/*] Error reading response body:', readError);
+          }
+        }
+        
+        // Ensure content-type header is set correctly for JSON responses
+        const headers = new Headers(response.headers);
+        if (!headers.get('content-type') && contentType.includes('application/json')) {
+          headers.set('content-type', 'application/json');
+        }
+        
+        // Return the original response (body is still available since we cloned for checking)
+        return response;
+      }
+      
+      return response;
+    } catch (handlerError: any) {
+      console.error('[tRPC /api/trpc/*] Handler error:', handlerError);
+      const errorResponse = [{
+        error: {
+          message: handlerError?.message || 'Request handler error',
+          code: -32603,
+          data: {
+            code: 'INTERNAL_SERVER_ERROR',
+            httpStatus: 500,
+          },
+        },
+      }];
+      
+      return new Response(JSON.stringify(errorResponse), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+  } catch (error: any) {
     console.error('[tRPC /api/trpc/*] Unexpected error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
+    const errorResponse = [{
+      error: {
+        message: error?.message || 'Internal server error',
+        code: -32603,
+        data: {
+          code: 'INTERNAL_SERVER_ERROR',
+          httpStatus: 500,
+        },
+      },
+    }];
+    
+    return new Response(JSON.stringify(errorResponse), {
+      status: 200,
       headers: { 'content-type': 'application/json' },
     });
   }
@@ -77,19 +155,97 @@ export async function POST(request: Request) {
       });
     }
 
-    return fetchRequestHandler({
-      endpoint: '/api/trpc',
-      req: request,
-      router: appRouter,
-      createContext: ({ req }) => createContext({ req }),
-      onError({ error, path }) {
-        console.error('[tRPC /api/trpc/*] Error:', path, error.message);
-      },
-    });
-  } catch (error) {
+    try {
+      const response = await fetchRequestHandler({
+        endpoint: '/api/trpc',
+        req: request,
+        router: appRouter,
+        createContext: ({ req }) => createContext({ req }),
+        onError({ error, path }) {
+          console.error('[tRPC /api/trpc/*] Error:', path, error.message);
+        },
+      });
+      
+      // Ensure response has proper content-type header and is JSON
+      if (response) {
+        const contentType = response.headers.get('content-type') || '';
+        
+        // Check if response might be HTML (error page)
+        if (contentType.includes('text/html') || !contentType.includes('application/json')) {
+          try {
+            const clonedResponse = response.clone();
+            const text = await clonedResponse.text();
+            console.warn('[tRPC /api/trpc/*] Response content-type:', contentType);
+            console.warn('[tRPC /api/trpc/*] Response body preview:', text.substring(0, 200));
+            
+            // If it's HTML, it means we got an error page
+            if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+              console.error('[tRPC /api/trpc/*] Received HTML error page instead of JSON');
+              const errorResponse = [{
+                error: {
+                  message: 'Server returned HTML error page. The API route may not be configured correctly.',
+                  code: -32603,
+                  data: {
+                    code: 'INTERNAL_SERVER_ERROR',
+                    httpStatus: response.status,
+                  },
+                },
+              }];
+              
+              return new Response(JSON.stringify(errorResponse), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              });
+            }
+          } catch (readError) {
+            console.error('[tRPC /api/trpc/*] Error reading response body:', readError);
+          }
+        }
+        
+        // Ensure content-type header is set correctly for JSON responses
+        const headers = new Headers(response.headers);
+        if (!headers.get('content-type') && contentType.includes('application/json')) {
+          headers.set('content-type', 'application/json');
+        }
+        
+        // Return the original response (body is still available since we cloned for checking)
+        return response;
+      }
+      
+      return response;
+    } catch (handlerError: any) {
+      console.error('[tRPC /api/trpc/*] Handler error:', handlerError);
+      const errorResponse = [{
+        error: {
+          message: handlerError?.message || 'Request handler error',
+          code: -32603,
+          data: {
+            code: 'INTERNAL_SERVER_ERROR',
+            httpStatus: 500,
+          },
+        },
+      }];
+      
+      return new Response(JSON.stringify(errorResponse), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+  } catch (error: any) {
     console.error('[tRPC /api/trpc/*] Unexpected error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
+    const errorResponse = [{
+      error: {
+        message: error?.message || 'Internal server error',
+        code: -32603,
+        data: {
+          code: 'INTERNAL_SERVER_ERROR',
+          httpStatus: 500,
+        },
+      },
+    }];
+    
+    return new Response(JSON.stringify(errorResponse), {
+      status: 200,
       headers: { 'content-type': 'application/json' },
     });
   }
