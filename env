@@ -1,0 +1,19 @@
+# Database Configuration
+# Transaction pooler connection string from Supabase
+DATABASE_URL="postgresql://postgres.ogkbmvnflwvoixjxdhhb:7qfVrJ5BGP2aHXu@aws-1-eu-west-3.pooler.supabase.com:6543/postgres?sslmode=require"
+
+# Environment
+NODE_ENV=development
+
+# API Configuration (automatically set by Rork platform)
+# EXPO_PUBLIC_RORK_API_BASE_URL is automatically provided by Rork
+
+# Optional: Email Service (for production)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your-email@gmail.com
+# SMTP_PASSWORD=your-app-password
+
+# Optional: SMS Service (for production OTP)
+# AFRICAS_TALKING_API_KEY=your-api-key
+# AFRICAS_TALKING_USERNAME=your-username
