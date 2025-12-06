@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { MapPin, Clock, Star, User, ChevronLeft, DollarSign, X } from 'lucide-react-native';
+import { MapPin, Clock, Star, User, ChevronLeft, DollarSign, X, CheckCircle } from 'lucide-react-native';
 import { getCategoryColor, getCategoryLabel } from '@/constants/categories';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +13,9 @@ export default function TaskDetailsScreen() {
   const [bidModalVisible, setBidModalVisible] = useState(false);
   const [bidAmount, setBidAmount] = useState('');
   const [bidMessage, setBidMessage] = useState('');
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
 
   const taskQuery = trpc.tasks.get.useQuery({ id: taskId });
   const utils = trpc.useUtils();
@@ -32,6 +35,7 @@ export default function TaskDetailsScreen() {
     onSuccess: () => {
       utils.tasks.get.invalidate({ id: taskId });
       utils.tasks.list.invalidate();
+      utils.tasks.myTasks.invalidate();
       setBidModalVisible(false);
       setBidAmount('');
       setBidMessage('');
@@ -39,6 +43,33 @@ export default function TaskDetailsScreen() {
     },
     onError: (error) => {
       Alert.alert('Error', error.message || 'Failed to place bid');
+    },
+  });
+
+  const completeTaskMutation = trpc.tasks.complete.useMutation({
+    onSuccess: () => {
+      utils.tasks.get.invalidate({ id: taskId });
+      utils.tasks.list.invalidate();
+      utils.tasks.myTasks.invalidate();
+      // Show rating modal after completion
+      setRatingModalVisible(true);
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to complete task');
+    },
+  });
+
+  const createRatingMutation = trpc.ratings.create.useMutation({
+    onSuccess: () => {
+      utils.tasks.get.invalidate({ id: taskId });
+      utils.ratings.list.invalidate();
+      setRatingModalVisible(false);
+      setRating(0);
+      setRatingComment('');
+      Alert.alert('Success', 'Rating submitted successfully!');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to submit rating');
     },
   });
 
@@ -61,9 +92,9 @@ export default function TaskDetailsScreen() {
   }
 
   const task = taskQuery.data;
-  const categoryColor = getCategoryColor(task.category as any);
-  const categoryLabel = getCategoryLabel(task.category as any);
-  const sortedBids = [...task.bids].sort((a, b) => a.amount - b.amount);
+  const categoryColor = getCategoryColor(task.category);
+  const categoryLabel = getCategoryLabel(task.category);
+  const sortedBids = [...task.bids].sort((a, b) => Number(a.amount) - Number(b.amount));
 
   const handleAcceptBid = (bidId: string) => {
     if (!user) {
@@ -105,6 +136,8 @@ export default function TaskDetailsScreen() {
 
   const userHasAlreadyBid = task?.bids.some((bid) => bid.runner?.id === user?.id);
   const isTaskOwner = task?.createdBy === user?.id;
+  const isAssignedRunner = task?.assignedRunnerId === user?.id;
+  const canComplete = (isTaskOwner || isAssignedRunner) && task?.status === 'active';
 
   return (
     <View style={styles.container}>
@@ -126,8 +159,19 @@ export default function TaskDetailsScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
-          <Text style={styles.categoryText}>{categoryLabel}</Text>
+        <View style={styles.statusSection}>
+          <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
+            <Text style={styles.categoryText}>{categoryLabel}</Text>
+          </View>
+          <View style={[
+            styles.statusBadge,
+            task.status === 'open' && { backgroundColor: '#10B981' },
+            task.status === 'active' && { backgroundColor: '#F59E0B' },
+            task.status === 'completed' && { backgroundColor: '#6B7280' },
+            task.status === 'cancelled' && { backgroundColor: '#EF4444' },
+          ]}>
+            <Text style={styles.statusText}>{task.status.toUpperCase()}</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>{task.title}</Text>
@@ -221,6 +265,46 @@ export default function TaskDetailsScreen() {
           </View>
         )}
       </ScrollView>
+
+      {canComplete && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={() => {
+              Alert.alert(
+                'Complete Task',
+                isTaskOwner
+                  ? 'Mark this task as completed? The runner will be notified.'
+                  : 'Mark this task as completed? The requester will be notified.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Complete',
+                    style: 'default',
+                    onPress: () => {
+                      completeTaskMutation.mutate({
+                        taskId: task.id,
+                        userId: user!.id,
+                        completedBy: isTaskOwner ? 'requester' : 'runner',
+                      });
+                    },
+                  },
+                ]
+              );
+            }}
+            disabled={completeTaskMutation.isPending}
+          >
+            {completeTaskMutation.isPending ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <CheckCircle size={20} color="#FFFFFF" />
+                <Text style={styles.completeButtonText}>Mark as Completed</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
 
       {user?.isRunner && !isTaskOwner && task.status === 'open' && (
         <View style={styles.footer}>
@@ -356,12 +440,26 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  statusSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   categoryBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    marginBottom: 16,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700' as const,
   },
   categoryText: {
     color: '#FFFFFF',
@@ -552,6 +650,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#374151',
   },
   bidButtonText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+  },
+  completeButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  completeButtonText: {
     fontSize: 18,
     fontWeight: '700' as const,
     color: '#FFFFFF',

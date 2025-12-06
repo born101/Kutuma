@@ -110,8 +110,8 @@ export default function MyTasksScreen() {
             {tasks.map((task) => (
               <TaskCard
                 key={task.id}
-                task={task as any}
-                onPress={() => router.push(`/task/${task.id}` as any)}
+                task={task}
+                onPress={() => router.push(`/task/${task.id}`)}
               />
             ))}
           </View>

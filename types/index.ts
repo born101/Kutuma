@@ -6,19 +6,25 @@ export type BidType = 'max' | 'fixed';
 
 export interface Runner {
   id: string;
-  name: string;
+  name: string | null;
   rating: number;
   completedTasks: number;
-  avatar?: string;
+  profilePhoto?: string | null;
   verified: boolean;
+  email?: string | null;
+  phone?: string | null;
 }
 
 export interface Bid {
   id: string;
-  runner: Runner;
+  taskId: string;
+  runnerId: string;
   amount: number;
-  message?: string;
-  createdAt: Date;
+  message?: string | null;
+  status: 'pending' | 'accepted' | 'rejected';
+  runner?: Runner | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Task {
@@ -33,9 +39,12 @@ export interface Task {
   maxBudget?: number;
   fixedPrice?: number;
   bids: Bid[];
-  createdBy?: string;
-  assignedRunner?: Runner;
-  createdAt: Date;
+  createdBy: string;
+  assignedRunnerId?: string | null;
+  assignedRunner?: Runner | null;
+  completedAt?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface OnboardingSlide {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { trpcClient } from '@/lib/trpc';
@@ -22,6 +22,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const validationInProgress = React.useRef(false);
 
   const logout = useCallback(async () => {
     try {
@@ -61,6 +62,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
           // Validate session in the background after a short delay
           setTimeout(async () => {
+            // Prevent concurrent validation calls
+            if (validationInProgress.current) {
+              console.log('⏸️ Session validation already in progress, skipping...');
+              return;
+            }
+
+            validationInProgress.current = true;
             try {
               console.log('🔄 Validating session with server...');
               const currentUser = await trpcClient.auth.getCurrentUser.query({ token: storedToken });
@@ -87,6 +95,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
                 await AsyncStorage.removeItem(TOKEN_KEY);
                 await AsyncStorage.removeItem(USER_KEY);
               }
+            } finally {
+              validationInProgress.current = false;
             }
           }, 500);
         } else {

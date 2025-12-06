@@ -14,7 +14,7 @@ export default function TaskCard({ task, onPress }: TaskCardProps) {
   const categoryLabel = getCategoryLabel(task.category);
 
   const lowestBid = task.bids.length > 0
-    ? Math.min(...task.bids.map(b => b.amount))
+    ? Math.min(...task.bids.map(b => Number(b.amount)))
     : null;
 
   const displayBid = task.bidType === 'max' ? lowestBid : task.fixedPrice;

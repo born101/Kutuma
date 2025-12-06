@@ -1,158 +1,197 @@
-# 🚀 Database Setup Guide
+# Database Setup Guide
 
-This guide will help you fix the "JSON Parse error" and set up your Supabase PostgreSQL database.
+## Quick Setup Options
 
-## Problem
-The "JSON Parse error: Unexpected character" occurs when:
-- Database tables don't exist
-- Backend tries to query non-existent tables
-- Server returns HTML error pages instead of JSON
+You have 3 options for setting up PostgreSQL. **I recommend Option 1 (Supabase)** as it's the easiest and free.
 
-## Solution
+---
 
-### Step 1: Verify Your Environment
-Check your `env` file contains:
-```bash
-DATABASE_URL=postgresql://postgres:n8ttf199@db.ogkbmvnflwvoixjxdhhb.supabase.co:5432/postgres
+## Option 1: Supabase (Recommended - Easiest & Free)
+
+### Step 1: Create Supabase Account
+1. Go to https://supabase.com
+2. Click "Start your project"
+3. Sign up with GitHub, Google, or email
+4. Create a new organization (if prompted)
+
+### Step 2: Create a New Project
+1. Click "New Project"
+2. Fill in:
+   - **Name**: `kutuma` (or any name you like)
+   - **Database Password**: Create a strong password (save this!)
+   - **Region**: Choose closest to you
+   - **Pricing Plan**: Free tier is fine
+3. Click "Create new project"
+4. Wait 2-3 minutes for project to be created
+
+### Step 3: Get Connection String
+1. Go to **Settings** (gear icon in left sidebar)
+2. Click **Database**
+3. Scroll down to **Connection string**
+4. Under **Connection string**, select **URI**
+5. Copy the connection string (looks like: `postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres`)
+6. Replace `[YOUR-PASSWORD]` with the password you created in Step 2
+
+### Step 4: Create .env File
+1. Copy `env.example` to `.env`:
+   ```powershell
+   Copy-Item env.example .env
+   ```
+
+2. Open `.env` and update the `DATABASE_URL`:
+   ```
+   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.xxxxx.supabase.co:5432/postgres
+   ```
+   (Replace with your actual connection string from Step 3)
+
+### Step 5: Run Migration
+```powershell
+npx drizzle-kit push
 ```
 
-### Step 2: Run Database Setup
-Run this command to create all necessary tables:
+**Done!** Your database is now set up.
 
-```bash
-bun run backend/db/setup.ts
+---
+
+## Option 2: Neon (Free Cloud Database)
+
+### Step 1: Create Neon Account
+1. Go to https://neon.tech
+2. Click "Sign Up"
+3. Sign up with GitHub or email
+
+### Step 2: Create a Project
+1. Click "Create a project"
+2. Fill in:
+   - **Name**: `kutuma`
+   - **Region**: Choose closest to you
+3. Click "Create project"
+
+### Step 3: Get Connection String
+1. After project is created, you'll see a connection string
+2. It looks like: `postgresql://username:password@ep-xxxxx.us-east-2.aws.neon.tech/neondb?sslmode=require`
+3. Copy this string
+
+### Step 4: Create .env File
+1. Copy `env.example` to `.env`:
+   ```powershell
+   Copy-Item env.example .env
+   ```
+
+2. Open `.env` and update the `DATABASE_URL`:
+   ```
+   DATABASE_URL=postgresql://username:password@ep-xxxxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+   ```
+   (Replace with your actual connection string from Step 3)
+
+### Step 5: Run Migration
+```powershell
+npx drizzle-kit push
 ```
 
-This will:
-1. Test database connection
-2. Create all tables (users, sessions, tasks, bids, verifications)
-3. Verify the setup
+**Done!** Your database is now set up.
 
-### Step 3: Verify Setup
-After running the setup, you should see:
+---
+
+## Option 3: Local PostgreSQL (Advanced)
+
+### Step 1: Install PostgreSQL
+1. Download PostgreSQL from https://www.postgresql.org/download/windows/
+2. Run the installer
+3. During installation:
+   - Remember the password you set for the `postgres` user
+   - Keep default port (5432)
+   - Keep default installation directory
+
+### Step 2: Start PostgreSQL Service
+1. Open **Services** (search "services" in Windows)
+2. Find **postgresql-x64-XX** service
+3. Make sure it's **Running** (if not, right-click and Start)
+
+### Step 3: Create Database
+1. Open **pgAdmin** (installed with PostgreSQL) or use command line
+2. **Using pgAdmin:**
+   - Connect to server (password is what you set during installation)
+   - Right-click "Databases" → "Create" → "Database"
+   - Name: `kutuma`
+   - Click "Save"
+
+3. **Using Command Line:**
+   ```powershell
+   # Find PostgreSQL bin directory (usually C:\Program Files\PostgreSQL\XX\bin)
+   # Add to PATH or use full path
+   & "C:\Program Files\PostgreSQL\16\bin\createdb.exe" -U postgres kutuma
+   ```
+   (Enter password when prompted)
+
+### Step 4: Create .env File
+1. Copy `env.example` to `.env`:
+   ```powershell
+   Copy-Item env.example .env
+   ```
+
+2. Open `.env` and update the `DATABASE_URL`:
+   ```
+   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/kutuma
+   ```
+   (Replace `YOUR_PASSWORD` with the password you set during installation)
+
+### Step 5: Run Migration
+```powershell
+npx drizzle-kit push
 ```
-✅ Database setup completed successfully!
+
+**Done!** Your database is now set up.
+
+---
+
+## Verify Setup
+
+After running `npx drizzle-kit push`, you should see:
+```
+✓ Pushed schema to database
 ```
 
-### Step 4: Restart Your Server
-After database setup, restart your development server:
-1. Stop the current server (Ctrl+C)
-2. Run: `bun run start` or `bun run start-web`
+If you see errors:
+- **Connection refused**: Database isn't running or wrong connection string
+- **Authentication failed**: Wrong password in DATABASE_URL
+- **Database does not exist**: Database name is wrong
 
-## What Was Fixed
-
-### 1. **Added Error Handling** (backend/hono.ts)
-- Global error handler that returns proper JSON errors
-- Health check endpoint at `/health`
-
-### 2. **Improved Session Management** (backend/services/session.ts)
-- Added `validateSession()` method
-- Added `deleteSession()` method
-- Better token generation
-
-### 3. **Enhanced Context** (backend/trpc/create-context.ts)
-- Session validation in context
-- Protected procedure for authenticated routes
-- Better error formatting
-
-### 4. **Database Setup Script** (backend/db/setup.ts)
-- Automated table creation
-- Connection verification
-- Clear error messages
-
-## Testing the Fix
-
-After setup, test these flows:
-
-### 1. Test Health Check
-Visit: `http://localhost:8787/health`
-
-You should see:
-```json
-{
-  "status": "healthy",
-  "database": "connected",
-  "timestamp": "2025-12-01T..."
-}
-```
-
-### 2. Test Authentication
-1. Open the app
-2. Click "Login"
-3. Enter an email
-4. Complete profile setup
-5. You should be redirected to the home screen
-
-### 3. Test Task Creation
-1. Click "Post a Task"
-2. Fill in the details
-3. Submit
-4. Task should appear on the home screen
+---
 
 ## Troubleshooting
 
-### Issue: "DATABASE_URL not found"
-**Solution:** Make sure your `env` file exists in the project root with the correct DATABASE_URL.
+### "ECONNREFUSED" Error
+- **Supabase/Neon**: Check your connection string is correct
+- **Local**: Make sure PostgreSQL service is running
 
-### Issue: "Connection timeout"
-**Solution:** 
-1. Check your internet connection
-2. Verify Supabase credentials are correct
-3. Check if your IP is allowed in Supabase (some plans require IP whitelisting)
+### "Authentication failed" Error
+- Check your password in DATABASE_URL
+- For Supabase: Use the password you set when creating the project
+- For Neon: Use the password from your connection string
+- For Local: Use the postgres user password
 
-### Issue: Tables already exist error
-**Solution:** This is fine! The script uses `CREATE TABLE IF NOT EXISTS`, so it's safe to run multiple times.
+### "Database does not exist" Error
+- For Supabase/Neon: The database is created automatically, just use the connection string as-is
+- For Local: Make sure you created the `kutuma` database
 
-### Issue: Still getting JSON Parse error
-**Solution:**
-1. Make sure you ran the database setup script
-2. Restart your development server
-3. Clear app cache/storage
-4. Try refreshing the browser (web) or restarting the app (mobile)
+### Can't find .env file
+- Make sure you created it in the project root (same folder as `package.json`)
+- The file should be named exactly `.env` (with the dot at the start)
 
-## Database Schema
-
-Your database now has these tables:
-
-### `users`
-- User profiles (name, email, phone, isRunner)
-- Rating and completed tasks count
-- Email and phone verification status
-
-### `sessions`
-- Active user sessions
-- Token-based authentication
-- Automatic expiry (30 days)
-
-### `verifications`
-- OTP codes for email/phone verification
-- Temporary storage (codes expire)
-
-### `tasks`
-- Posted tasks
-- Status tracking (open, assigned, completed)
-- Budget/pricing information
-
-### `bids`
-- Runner bids on tasks
-- Bid amounts and messages
-- Status (pending, accepted, rejected)
+---
 
 ## Next Steps
 
 Once your database is set up:
+1. ✅ Run `npx drizzle-kit push` to create tables
+2. (Optional) Run `bun backend/db/seed.ts` to add sample data
+3. Start your app and test!
 
-1. ✅ Create test users
-2. ✅ Post test tasks
-3. ✅ Place test bids
-4. ✅ Test the full workflow
-
-Your platform is now ready for development and testing!
+---
 
 ## Need Help?
 
-If you encounter any issues:
-1. Check the console logs for detailed error messages
-2. Verify your DATABASE_URL is correct
-3. Make sure you have a stable internet connection
-4. Contact support if the issue persists
+- **Supabase Docs**: https://supabase.com/docs/guides/database
+- **Neon Docs**: https://neon.tech/docs
+- **PostgreSQL Docs**: https://www.postgresql.org/docs/

@@ -70,6 +70,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   assignedTasks: many(tasks, { relationName: 'assignedTasks' }),
   bids: many(bids),
   sessions: many(sessions),
+  ratingsGiven: many(ratings, { relationName: 'ratingsGiven' }),
+  ratingsReceived: many(ratings, { relationName: 'ratingsReceived' }),
+  paymentsMade: many(payments, { relationName: 'paymentsMade' }),
+  paymentsReceived: many(payments, { relationName: 'paymentsReceived' }),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -84,6 +88,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     relationName: 'assignedTasks',
   }),
   bids: many(bids),
+  ratings: many(ratings),
 }));
 
 export const bidsRelations = relations(bids, ({ one }) => ({
@@ -97,10 +102,67 @@ export const bidsRelations = relations(bids, ({ one }) => ({
   }),
 }));
 
+export const ratings = pgTable('ratings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: uuid('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  fromUserId: uuid('from_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  toUserId: uuid('to_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  rating: integer('rating').notNull(), // 1-5
+  comment: text('comment'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const ratingsRelations = relations(ratings, ({ one }) => ({
+  task: one(tasks, {
+    fields: [ratings.taskId],
+    references: [tasks.id],
+  }),
+  fromUser: one(users, {
+    fields: [ratings.fromUserId],
+    references: [users.id],
+    relationName: 'ratingsGiven',
+  }),
+  toUser: one(users, {
+    fields: [ratings.toUserId],
+    references: [users.id],
+    relationName: 'ratingsReceived',
+  }),
+}));
+
+export const payments = pgTable('payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: uuid('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  status: text('status').notNull().default('pending'), // pending, completed, refunded
+  method: text('method').notNull(), // ecocash, onemoney, bank, cash
+  transactionId: text('transaction_id'),
+  payerId: uuid('payer_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  recipientId: uuid('recipient_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+});
+
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, {
     fields: [sessions.userId],
     references: [users.id],
+  }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [payments.taskId],
+    references: [tasks.id],
+  }),
+  payer: one(users, {
+    fields: [payments.payerId],
+    references: [users.id],
+    relationName: 'paymentsMade',
+  }),
+  recipient: one(users, {
+    fields: [payments.recipientId],
+    references: [users.id],
+    relationName: 'paymentsReceived',
   }),
 }));
 
@@ -114,3 +176,7 @@ export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type Bid = typeof bids.$inferSelect;
 export type NewBid = typeof bids.$inferInsert;
+export type Rating = typeof ratings.$inferSelect;
+export type NewRating = typeof ratings.$inferInsert;
+export type Payment = typeof payments.$inferSelect;
+export type NewPayment = typeof payments.$inferInsert;

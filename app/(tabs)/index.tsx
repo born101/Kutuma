@@ -42,7 +42,7 @@ export default function BrowseTasksScreen() {
           <Text style={styles.headerTitle}>Browse Tasks</Text>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => router.push('/post-task' as any)}
+            onPress={() => router.push('/post-task')}
           >
             <Plus size={24} color="#FFFFFF" strokeWidth={3} />
           </TouchableOpacity>
@@ -152,8 +152,8 @@ export default function BrowseTasksScreen() {
             {filteredTasks.map((task) => (
               <TaskCard
                 key={task.id}
-                task={task as any}
-                onPress={() => router.push(`/task/${task.id}` as any)}
+                task={task}
+                onPress={() => router.push(`/task/${task.id}`)}
               />
             ))}
           </ScrollView>
