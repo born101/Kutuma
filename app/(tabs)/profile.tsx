@@ -87,6 +87,44 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Ratings Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Star size={20} color="#FF6B4A" fill="#FF6B4A" />
+            <Text style={styles.sectionTitle}>Ratings</Text>
+          </View>
+          
+          <View style={styles.ratingStats}>
+            <View style={styles.ratingAverage}>
+              <Text style={styles.ratingNumber}>{user.rating.toFixed(1)}</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={16}
+                    color={star <= Math.round(user.rating || 0) ? '#FF6B4A' : '#333333'}
+                    fill={star <= Math.round(user.rating || 0) ? '#FF6B4A' : 'none'}
+                    strokeWidth={2}
+                  />
+                ))}
+              </View>
+              <Text style={styles.ratingText}>Based on {user.completedTasks} completed tasks</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Payment History Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Award size={20} color="#FF6B4A" />
+            <Text style={styles.sectionTitle}>Payment History</Text>
+          </View>
+          
+          <View style={styles.paymentsList}>
+            <Text style={styles.placeholderText}>Payment history will appear here</Text>
+          </View>
+        </View>
+
         <View style={styles.menuSection}>
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuIconContainer}>
@@ -240,6 +278,56 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     backgroundColor: '#374151',
+  },
+  section: {
+    backgroundColor: '#1F2937',
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderRadius: 16,
+    padding: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+  },
+  ratingStats: {
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+  },
+  ratingAverage: {
+    alignItems: 'center',
+    gap: 10,
+  },
+  ratingNumber: {
+    fontSize: 32,
+    fontWeight: 'bold' as const,
+    color: '#FF6B4A',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    color: '#999999',
+    marginTop: 5,
+  },
+  paymentsList: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  placeholderText: {
+    fontSize: 14,
+    color: '#9CA3AF',
   },
   menuSection: {
     backgroundColor: '#1F2937',

@@ -5,6 +5,7 @@ import { MapPin, Clock, Star, User, ChevronLeft, DollarSign, X, CheckCircle } fr
 import { getCategoryColor, getCategoryLabel } from '@/constants/categories';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/contexts/AuthContext';
+import PaymentModal from '@/components/PaymentModal';
 
 export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -16,6 +17,7 @@ export default function TaskDetailsScreen() {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
 
   const taskQuery = trpc.tasks.get.useQuery({ id: taskId });
   const utils = trpc.useUtils();
@@ -70,6 +72,18 @@ export default function TaskDetailsScreen() {
     },
     onError: (error) => {
       Alert.alert('Error', error.message || 'Failed to submit rating');
+    },
+  });
+
+  const createPaymentMutation = trpc.payments.create.useMutation({
+    onSuccess: () => {
+      utils.tasks.get.invalidate({ id: taskId });
+      utils.tasks.list.invalidate();
+      setPaymentModalVisible(false);
+      Alert.alert('Success', 'Payment created successfully!');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to create payment');
     },
   });
 
@@ -303,6 +317,15 @@ export default function TaskDetailsScreen() {
               </>
             )}
           </TouchableOpacity>
+          {isTaskOwner && task?.status === 'active' && (
+            <TouchableOpacity
+              style={styles.paymentButton}
+              onPress={() => setPaymentModalVisible(true)}
+            >
+              <DollarSign size={20} color="#FFFFFF" />
+              <Text style={styles.paymentButtonText}>Make Payment</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -401,6 +424,137 @@ export default function TaskDetailsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Rating Modal */}
+      <Modal
+        visible={ratingModalVisible}
+        transparent
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.ratingModal}>
+            <View style={styles.ratingHeader}>
+              <Text style={styles.ratingTitle}>Rate {task?.assignedRunnerId === user?.id ? 'Task Requester' : 'Runner'}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setRatingModalVisible(false);
+                  setRating(0);
+                  setRatingComment('');
+                }}
+              >
+                <X size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={styles.ratingContent}
+              contentContainerStyle={styles.ratingContentPadding}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Star Rating */}
+              <View style={styles.starsContainer}>
+                <Text style={styles.starsLabel}>How would you rate this experience?</Text>
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      onPress={() => setRating(star)}
+                      style={styles.starButton}
+                    >
+                      <Star
+                        size={40}
+                        color={star <= rating ? '#FF6B4A' : '#333333'}
+                        fill={star <= rating ? '#FF6B4A' : 'none'}
+                        strokeWidth={2}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Comment Input */}
+              <View style={styles.commentSection}>
+                <Text style={styles.commentLabel}>Additional feedback (optional)</Text>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Share your experience..."
+                  placeholderTextColor="#666666"
+                  value={ratingComment}
+                  onChangeText={setRatingComment}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={500}
+                />
+                <Text style={styles.charCount}>{ratingComment.length}/500</Text>
+              </View>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  rating === 0 && styles.submitButtonDisabled
+                ]}
+                onPress={() => {
+                  if (rating === 0) {
+                    Alert.alert('Error', 'Please select a rating');
+                    return;
+                  }
+                  const ratedUserId = task?.assignedRunnerId === user?.id 
+                    ? task?.createdBy 
+                    : task?.assignedRunnerId;
+                  
+                  if (!ratedUserId) {
+                    Alert.alert('Error', 'Unable to determine who to rate');
+                    return;
+                  }
+
+                  createRatingMutation.mutate({
+                    taskId: task.id,
+                    ratedUserId,
+                    rating,
+                    comment: ratingComment || undefined,
+                  });
+                }}
+                disabled={createRatingMutation.isPending || rating === 0}
+              >
+                {createRatingMutation.isPending ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Submit Rating</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        visible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+        taskAmount={task?.fixedPrice || task?.maxBudget || '0'}
+        isLoading={createPaymentMutation.isPending}
+        onSubmit={(method, transactionId) => {
+          if (!user) {
+            Alert.alert('Error', 'You must be logged in');
+            return;
+          }
+
+          const amount = task?.fixedPrice || task?.maxBudget;
+          if (!amount) {
+            Alert.alert('Error', 'Unable to determine payment amount');
+            return;
+          }
+
+          createPaymentMutation.mutate({
+            taskId: task.id,
+            payerId: user.id,
+            amount: parseFloat(amount.toString()),
+            method,
+            transactionId,
+          });
+        }}
+      />
     </View>
   );
 }
@@ -668,6 +822,21 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: '#FFFFFF',
   },
+  paymentButton: {
+    backgroundColor: '#0891B2',
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  paymentButtonText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -787,5 +956,94 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700' as const,
     color: '#FFFFFF',
+  },
+  ratingModal: {
+    backgroundColor: '#1A1A1A',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    marginTop: 'auto',
+  },
+  ratingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
+  ratingTitle: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+  },
+  ratingContent: {
+    flex: 1,
+  },
+  ratingContentPadding: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+  starsContainer: {
+    marginBottom: 30,
+  },
+  starsLabel: {
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#FFFFFF',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  starRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15,
+  },
+  starButton: {
+    padding: 5,
+  },
+  commentSection: {
+    marginBottom: 20,
+  },
+  commentLabel: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  commentInput: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 10,
+    color: '#FFFFFF',
+    padding: 15,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: '#333333',
+    marginBottom: 8,
+  },
+  charCount: {
+    fontSize: 12,
+    color: '#999999',
+    textAlign: 'right',
+  },
+  submitButton: {
+    backgroundColor: '#FF6B4A',
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#666666',
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600' as const,
+    fontSize: 16,
   },
 });
