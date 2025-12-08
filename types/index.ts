@@ -21,7 +21,7 @@ export interface Bid {
   runnerId: string;
   amount: number;
   message?: string | null;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: 'pending' | 'accepted' | 'rejected' | string;
   runner?: Runner | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -31,11 +31,11 @@ export interface Task {
   id: string;
   title: string;
   description: string;
-  category: TaskCategory;
+  category: TaskCategory | string;
   location: string;
   timeframe: string;
-  status: TaskStatus;
-  bidType: BidType;
+  status: TaskStatus | string;
+  bidType: BidType | string;
   maxBudget?: number;
   fixedPrice?: number;
   bids: Bid[];

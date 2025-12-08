@@ -51,6 +51,11 @@ export const myTasksProcedure = publicProcedure
       where: eq(tasks.assignedRunnerId, input.userId),
       with: {
         creator: true,
+        bids: {
+          with: {
+            runner: true,
+          },
+        },
       },
       orderBy: (tasks, { desc }) => [desc(tasks.createdAt)],
     });
@@ -59,9 +64,19 @@ export const myTasksProcedure = publicProcedure
       ...task,
       maxBudget: task.maxBudget ? parseFloat(task.maxBudget) : undefined,
       fixedPrice: task.fixedPrice ? parseFloat(task.fixedPrice) : undefined,
-      creator: {
-        ...task.creator,
-        rating: parseFloat(task.creator.rating),
-      },
+      bids: task.bids.map((bid) => ({
+        ...bid,
+        amount: parseFloat(bid.amount),
+        runner: {
+          ...bid.runner,
+          rating: parseFloat(bid.runner.rating),
+        },
+      })),
+      creator: task.creator
+        ? {
+            ...task.creator,
+            rating: parseFloat(task.creator.rating),
+          }
+        : null,
     }));
   });

@@ -106,8 +106,8 @@ export default function TaskDetailsScreen() {
   }
 
   const task = taskQuery.data;
-  const categoryColor = getCategoryColor(task.category);
-  const categoryLabel = getCategoryLabel(task.category);
+  const categoryColor = getCategoryColor(task.category as any);
+  const categoryLabel = getCategoryLabel(task.category as any);
   const sortedBids = [...task.bids].sort((a, b) => Number(a.amount) - Number(b.amount));
 
   const handleAcceptBid = (bidId: string) => {
@@ -499,18 +499,25 @@ export default function TaskDetailsScreen() {
                     Alert.alert('Error', 'Please select a rating');
                     return;
                   }
-                  const ratedUserId = task?.assignedRunnerId === user?.id 
+                  
+                  if (!user) {
+                    Alert.alert('Error', 'You must be logged in');
+                    return;
+                  }
+                  
+                  const toUserId = task?.assignedRunnerId === user?.id 
                     ? task?.createdBy 
                     : task?.assignedRunnerId;
                   
-                  if (!ratedUserId) {
+                  if (!toUserId) {
                     Alert.alert('Error', 'Unable to determine who to rate');
                     return;
                   }
 
                   createRatingMutation.mutate({
                     taskId: task.id,
-                    ratedUserId,
+                    fromUserId: user.id,
+                    toUserId,
                     rating,
                     comment: ratingComment || undefined,
                   });
@@ -532,7 +539,7 @@ export default function TaskDetailsScreen() {
       <PaymentModal
         visible={paymentModalVisible}
         onClose={() => setPaymentModalVisible(false)}
-        taskAmount={task?.fixedPrice || task?.maxBudget || '0'}
+        taskAmount={(task?.fixedPrice || task?.maxBudget || '0').toString()}
         isLoading={createPaymentMutation.isPending}
         onSubmit={(method, transactionId) => {
           if (!user) {
@@ -546,11 +553,21 @@ export default function TaskDetailsScreen() {
             return;
           }
 
+          const recipientId = task?.createdBy === user.id 
+            ? task?.assignedRunnerId 
+            : task?.createdBy;
+          
+          if (!recipientId) {
+            Alert.alert('Error', 'Unable to determine payment recipient');
+            return;
+          }
+
           createPaymentMutation.mutate({
             taskId: task.id,
             payerId: user.id,
+            recipientId,
             amount: parseFloat(amount.toString()),
-            method,
+            method: method as 'ecocash' | 'onemoney' | 'bank' | 'cash',
             transactionId,
           });
         }}

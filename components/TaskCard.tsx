@@ -10,8 +10,8 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, onPress }: TaskCardProps) {
-  const categoryColor = getCategoryColor(task.category);
-  const categoryLabel = getCategoryLabel(task.category);
+  const categoryColor = getCategoryColor(task.category as any);
+  const categoryLabel = getCategoryLabel(task.category as any);
 
   const lowestBid = task.bids.length > 0
     ? Math.min(...task.bids.map(b => Number(b.amount)))

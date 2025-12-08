@@ -139,6 +139,7 @@ export const payments = pgTable('payments', {
   payerId: uuid('payer_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   recipientId: uuid('recipient_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
   completedAt: timestamp('completed_at'),
 });
 
